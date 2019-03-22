@@ -4,28 +4,22 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.stream.Collectors;
 
 public abstract class Persistable<T extends Persistable> {
+    private Class<T> instance;
+
+    public Persistable(Class<T> instance) {
+        this.instance = instance;
+    }
 
     abstract void load(ResultSet resultSet, Connection connection) throws SQLException;
-
-    abstract T getInstance();
 
     public void insert(String sql, Connection connection, Parameter... parameters) {
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            int pos = 1;
-            for (Parameter parameter : parameters) {
-                if (parameter.getType().equals(Parameter.ParameterType.String)) {
-                    statement.setString(pos, parameter.getStringValue());
-                }
-                if (parameter.getType().equals(Parameter.ParameterType.Int)) {
-                    statement.setInt(pos, parameter.getIntValue());
-                }
-                pos++;
-            }
+            setParameters(statement, parameters);
 
             statement.execute();
         } catch (SQLException e) {
@@ -33,7 +27,7 @@ public abstract class Persistable<T extends Persistable> {
         }
     }
 
-    public T getById(String query, int id, Connection connection) {
+    public void getById(String query, int id, Connection connection) {
 
 
         try (PreparedStatement statement = connection.prepareStatement(query)) {
@@ -41,22 +35,57 @@ public abstract class Persistable<T extends Persistable> {
             statement.setInt(pos, id);
             ResultSet rs = statement.executeQuery();
             if (rs.next()) {
-                T a = getInstance();
-                a.load(rs, connection);
-                return a;
+                load(rs, connection);
+
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return null;
     }
 
-    public static String makeInQuery(String quey, String... parameters) {
-        String questionMarks = Arrays.stream(parameters).map(param -> "?").collect(Collectors.joining(","));
+    public ArrayList<T> query(String sql, Connection connection, Parameter... parameters) {
+        ArrayList<T> response = new ArrayList<>();
+        if (hasInParameters(parameters)) {
+            sql = makeInQuery(sql, parameters);
+        }
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            setParameters(statement, parameters);
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+
+                T newInstance = instance.newInstance();
+                newInstance.load(rs, connection);
+                response.add(newInstance);
+            }
+        } catch (SQLException | IllegalAccessException | InstantiationException e) {
+            e.printStackTrace();
+        }
+        return response;
+    }
+
+    private boolean hasInParameters(Parameter... parameters) {
+        return Arrays.stream(parameters).anyMatch(parameter -> parameter.getType().equals(Parameter.ParameterType.IN));
+    }
+
+    public String makeInQuery(String quey, Parameter... parameters) {
+        Parameter paramIn = Arrays.stream(parameters).filter(parameter -> parameter.getType().equals(Parameter.ParameterType.IN)).findFirst().get();
+        StringBuilder questionMarks = new StringBuilder();
+        int size = paramIn.getValues().getValues().size();
+        int curentSize = 1;
+        for (Object i : paramIn.getValues().getValues()) {
+
+            questionMarks.append("?");
+            if (curentSize<size) {
+                questionMarks.append(",");
+                curentSize++;
+            }
+        }
+
+
         return quey + "(" + questionMarks + ")";
     }
 
-    public static String getLikeTypeWord(String word, LikeType likeType) {
+    public String getLikeTypeWord(String word, LikeType likeType) {
         String likeWord;
         switch (likeType) {
             case Start:
@@ -70,5 +99,41 @@ public abstract class Persistable<T extends Persistable> {
                 break;
         }
         return likeWord;
+    }
+
+    private void setParameters(PreparedStatement statement, Parameter... parameters) throws SQLException {
+        int pos = 1;
+        for (Parameter parameter : parameters) {
+            switch (parameter.getType()) {
+                case Int:
+                    statement.setInt(pos, parameter.getIntValue());
+                    break;
+                case String:
+                    statement.setString(pos, parameter.getStringValue());
+                    break;
+                case Like:
+                    statement.setString(pos, getLikeTypeWord(parameter.getStringValue(), parameter.getLikeType()));
+                    break;
+                case IN:
+                    Values values = parameter.getValues();
+                    int newPos = pos;
+                    for (Object value : values.getValues()) {
+                        if (values.getType().equals(Values.Type.INT)) {
+                            statement.setInt(newPos, (Integer) value);
+                            newPos++;
+                        }
+
+                        if (values.getType().equals(Values.Type.STRING)) {
+                            statement.setString(newPos, (String) value);
+                            newPos++;
+                        }
+                    }
+                    pos = newPos;
+                default:
+                    break;
+
+            }
+            pos++;
+        }
     }
 }

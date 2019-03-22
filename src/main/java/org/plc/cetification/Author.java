@@ -17,22 +17,18 @@ public class Author extends Persistable<Author> {
     public static Author insert(int id, String name, Connection connection) {
         Author author = new Author();
         author.insert(insert, connection, new Parameter(Parameter.ParameterType.Int, id), new Parameter(Parameter.ParameterType.String, name));
-        author = author.getById(byId, id, connection);
+        author.getById(byId, id, connection);
         return author;
     }
 
     private Author() {
+        super(Author.class);
     }
 
     @Override
     void load(ResultSet resultSet, Connection connection) throws SQLException {
         id = resultSet.getInt("id");
         name = resultSet.getString("name");
-    }
-
-    @Override
-    Author getInstance() {
-        return new Author();
     }
 
     public int getId() {
@@ -44,7 +40,9 @@ public class Author extends Persistable<Author> {
     }
 
     public static Author getById(int id, Connection connection) {
-        return new Author().getById(byId, id, connection);
+        Author author = new Author();
+        author.getById(byId, id, connection);
+        return author;
     }
 
     public static List<Author> getByName(String authorName, Connection connection) {

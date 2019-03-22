@@ -1,10 +1,9 @@
 package org.plc.cetification;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,7 +12,6 @@ public class Cancion extends Persistable<Cancion> {
     private int position;
     private String name;
     private Album album;
-    private Connection connection;
     private static final String insert = "INSERT INTO cancion(id, album, name, number) values(?,?,?,?)";
     private static final String byId = "SELECT * FROM cancion WHERE id=?";
     private static final String byWordInName = "SELECT * FROM cancion WHERE name LIKE ?";
@@ -27,11 +25,12 @@ public class Cancion extends Persistable<Cancion> {
                 new Parameter(Parameter.ParameterType.String, name),
                 new Parameter(Parameter.ParameterType.Int, position)
         );
-        return cancion.getById(byId, id, connection);
+        cancion.getById(byId, id, connection);
+        return cancion;
     }
 
     public Cancion() {
-
+        super(Cancion.class);
     }
 
     @Override
@@ -42,30 +41,15 @@ public class Cancion extends Persistable<Cancion> {
         album = Album.getById(resultSet.getInt("album"), connection);
     }
 
-    @Override
-    Cancion getInstance() {
-        return new Cancion();
-    }
-
     public static List<Cancion> getByAlbumns(List<Album> albums, Connection connection) {
-        String albumsQuestionMark = albums.stream().map(author1 -> "?").collect(Collectors.joining(","));
-        String select = "SELECT * FROM cancion WHERE album IN (" + albumsQuestionMark + ")";
-        List<Cancion> songs = new ArrayList<>();
-        try (PreparedStatement statement = connection.prepareStatement(select)) {
-            int pos = 1;
-            for (Album album : albums) {
-                statement.setInt(pos, album.getId());
-                pos++;
-            }
-            ResultSet rs = statement.executeQuery();
-            while (rs.next()) {
-                Cancion a = new Cancion();
-                a.load(rs, connection);
-                songs.add(a);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+
+        List<Integer> albumIds = albums.stream().map(Album::getId).collect(Collectors.toList());
+        String select = "SELECT * FROM cancion WHERE album IN ";
+        Cancion cancion = new Cancion();
+
+        List<Cancion> songs = cancion.query(select, connection,
+                new Parameter(Parameter.ParameterType.IN, new Values(Values.Type.INT, albumIds)));
+
         return songs;
     }
 
@@ -75,40 +59,18 @@ public class Cancion extends Persistable<Cancion> {
     }
 
     public static List<Cancion> getByName(String wordInName, LikeType likeType, Connection connection) {
-        List<Cancion> cancions = new ArrayList<>();
-        try (PreparedStatement statement = connection.prepareStatement(byWordInName)) {
-            int pos = 1;
-            statement.setString(pos, getLikeTypeWord(wordInName, likeType));
-            ResultSet rs = statement.executeQuery();
-            while (rs.next()) {
-                Cancion a = new Cancion();
-                a.load(rs, connection);
-                cancions.add(a);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        Cancion cancion = new Cancion();
+        List<Cancion> cancions = cancion.query(byWordInName, connection,
+                new Parameter(Parameter.ParameterType.Like, wordInName, LikeType.Contains));
+
         return cancions;
     }
 
     public static List<Cancion> getByAlbumName(Connection connection, String... albumNames) {
-        List<Cancion> cancions = new ArrayList<>();
-        String query = makeInQuery(byAlbumName, albumNames);
-        try (PreparedStatement statement = connection.prepareStatement(query)) {
-            int pos = 1;
-            for (String albumName : albumNames) {
-                statement.setString(pos, albumName);
-                pos++;
-            }
-            ResultSet rs = statement.executeQuery();
-            while (rs.next()) {
-                Cancion a = new Cancion();
-                a.load(rs, connection);
-                cancions.add(a);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        Cancion cancion = new Cancion();
+        Parameter parameter = new Parameter(Parameter.ParameterType.IN, new Values(Values.Type.STRING, Arrays.asList(albumNames)));
+        List<Cancion> cancions = cancion.query(byAlbumName, connection, parameter);
+
         return cancions;
     }
 }

@@ -37,20 +37,31 @@ public class MusicopediaFactory {
             return Author.insert(authorNextId, authorName, connection);
         }
 
+        @Override
+        public List<Author> getAutorsBySongName(String songName) {
+            return Author.getBySongName(songName, connection);
+        }
+
+
         public Album agregarAlbum(Author author, String albumName, int year) {
             albumNextId++;
             return Album.getNewAlbum(albumNextId, albumName, year, author, connection);
-        }
-
-        public void agregarCancion(Album album, int position, String songName) {
-            cancionNextId++;
-            Cancion.insert(cancionNextId, position, songName, album, connection);
         }
 
         @Override
         public List<Album> getAlbumsByAuthor(String authorName) {
             List<Author> authors = Author.getByName(authorName, connection);
             return Album.getByAuthors(authors, connection);
+        }
+
+        @Override
+        public List<Album> getAlbumsByYear(int year) {
+            return Album.getByYear(year, connection);
+        }
+
+        public void agregarCancion(Album album, int position, String songName) {
+            cancionNextId++;
+            Cancion.insert(cancionNextId, position, songName, album, connection);
         }
 
         @Override
@@ -61,10 +72,6 @@ public class MusicopediaFactory {
             return Cancion.getByAlbumns(albums, connection);
         }
 
-        @Override
-        public List<Album> getAlbumsByYear(int year) {
-            return Album.getByYear(year, connection);
-        }
 
         @Override
         public List<Cancion> getAllSongsThatContain(String word) {
@@ -76,10 +83,6 @@ public class MusicopediaFactory {
             return Cancion.getByAlbumName(connection, albumNames);
         }
 
-        @Override
-        public List<Author> getAutorsBySongName(String songName) {
-            return Author.getBySongName(songName, connection);
-        }
 
         @Override
         public List<Cancion> getSongsThatStartWith(String startWord) {
