@@ -25,7 +25,7 @@ public class Cancion extends Persistable<Cancion> {
                 new Parameter(Parameter.ParameterType.String, name),
                 new Parameter(Parameter.ParameterType.Int, position)
         );
-        cancion.getById(byId, id, connection);
+        cancion.loadById(byId, id, connection);
         return cancion;
     }
 

@@ -21,7 +21,7 @@ public class Author extends Persistable<Author> {
     public static Author insert(int id, String name, Connection connection) {
         Author author = new Author();
         author.insert(insert, connection, new Parameter(Parameter.ParameterType.Int, id), new Parameter(Parameter.ParameterType.String, name));
-        author.getById(byId, id, connection);
+        author.loadById(byId, id, connection);
         return author;
     }
 
@@ -45,7 +45,7 @@ public class Author extends Persistable<Author> {
 
     public static Author getById(int id, Connection connection) {
         Author author = new Author();
-        author.getById(byId, id, connection);
+        author.loadById(byId, id, connection);
         return author;
     }
 

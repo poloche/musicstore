@@ -41,13 +41,13 @@ public class Album extends Persistable<Album> {
                 new Parameter(Parameter.ParameterType.String, name),
                 new Parameter(Parameter.ParameterType.Int, year)
         );
-        album.getById(byId, id, connection);
+        album.loadById(byId, id, connection);
         return album;
     }
 
     static Album getById(int id, Connection connection) {
         Album album = new Album();
-        album.getById(byId, id, connection);
+        album.loadById(byId, id, connection);
         return album;
     }
 

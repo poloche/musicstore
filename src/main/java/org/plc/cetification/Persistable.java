@@ -27,7 +27,7 @@ public abstract class Persistable<T extends Persistable> {
         }
     }
 
-    public void getById(String query, int id, Connection connection) {
+    public void loadById(String query, int id, Connection connection) {
 
 
         try (PreparedStatement statement = connection.prepareStatement(query)) {
@@ -67,7 +67,7 @@ public abstract class Persistable<T extends Persistable> {
         return Arrays.stream(parameters).anyMatch(parameter -> parameter.getType().equals(Parameter.ParameterType.IN));
     }
 
-    public String makeInQuery(String quey, Parameter... parameters) {
+    private String makeInQuery(String quey, Parameter... parameters) {
         Parameter paramIn = Arrays.stream(parameters).filter(parameter -> parameter.getType().equals(Parameter.ParameterType.IN)).findFirst().get();
         StringBuilder questionMarks = new StringBuilder();
         int size = paramIn.getValues().getValues().size();
@@ -85,7 +85,7 @@ public abstract class Persistable<T extends Persistable> {
         return quey + "(" + questionMarks + ")";
     }
 
-    public String getLikeTypeWord(String word, LikeType likeType) {
+    private String getLikeTypeWord(String word, LikeType likeType) {
         String likeWord;
         switch (likeType) {
             case Start:
